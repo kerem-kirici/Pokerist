@@ -2,7 +2,7 @@
 //  PokeristApp.swift
 //  Pokerist
 //
-//  Created by Kerem Kirici on 9.10.2025.
+//  Created by Kerem Kirici on 4.10.2025.
 //
 
 import SwiftUI
