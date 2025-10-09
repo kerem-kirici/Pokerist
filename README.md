@@ -34,14 +34,21 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
       Win probability and hand analysis
     </td>
     <td align="center">
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Info Details.png" width="250" alt="Dark Card Picker Full"/>
+      <br/>
+      <b>Analysis Details</b>
+      <br/>
+      Hand breakdown details
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Delete.png" width="250" alt="Light Swipe Delete"/>
       <br/>
       <b>Swipe to Delete</b>
       <br/>
       Intuitive card removal
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Sheet Half.png" width="250" alt="Light Card Picker Half"/>
       <br/>
@@ -55,8 +62,6 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
       <b>Card Picker (Full)</b>
       <br/>
       Expanded card selection view
-    </td>
-    <td align="center">
     </td>
   </tr>
 </table>
@@ -80,14 +85,21 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
       Detailed hand breakdown
     </td>
     <td align="center">
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Info Details.png" width="250" alt="Dark Card Picker Full"/>
+      <br/>
+      <b>Analysis Details</b>
+      <br/>
+      Hand breakdown details
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Delete.png" width="250" alt="Dark Swipe Delete"/>
       <br/>
       <b>Swipe to Delete</b>
       <br/>
       Intuitive card removal
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Sheet Half.png" width="250" alt="Dark Card Picker Half"/>
       <br/>
@@ -101,10 +113,6 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
       <b>Card Picker (Full)</b>
       <br/>
       Full selection interface
-    </td>
-    <td align="center">
-    </td>
-    <td align="center">
     </td>
   </tr>
 </table>
