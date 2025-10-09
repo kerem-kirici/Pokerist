@@ -20,21 +20,21 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
 <table>
   <tr>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Light Home.png" width="250" alt="Light Home Screen"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Home.png" width="250" alt="Light Home Screen"/>
       <br/>
       <b>Home Screen</b>
       <br/>
       Card selection with current hand badge
     </td>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Light Info.png" width="250" alt="Light Analysis View"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Info.png" width="250" alt="Light Analysis View"/>
       <br/>
       <b>Analysis View</b>
       <br/>
       Win probability and hand analysis
     </td>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Light Delete.png" width="250" alt="Light Swipe Delete"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Delete.png" width="250" alt="Light Swipe Delete"/>
       <br/>
       <b>Swipe to Delete</b>
       <br/>
@@ -43,14 +43,14 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
   </tr>
   <tr>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Light Sheet Half.png" width="250" alt="Light Card Picker Half"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Sheet Half.png" width="250" alt="Light Card Picker Half"/>
       <br/>
       <b>Card Picker (Half)</b>
       <br/>
       Detent-based card selection
     </td>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Light Sheet Full.png" width="250" alt="Light Card Picker Full"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Sheet Full.png" width="250" alt="Light Card Picker Full"/>
       <br/>
       <b>Card Picker (Full)</b>
       <br/>
@@ -66,28 +66,21 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
 <table>
   <tr>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Home.png" width="250" alt="Dark Home Screen"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Home.png" width="250" alt="Dark Home Screen"/>
       <br/>
       <b>Home Screen</b>
       <br/>
       Beautiful dark theme
     </td>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Info.png" width="250" alt="Dark Analysis View"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Info.png" width="250" alt="Dark Analysis View"/>
       <br/>
       <b>Analysis View</b>
       <br/>
       Detailed hand breakdown
     </td>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Delete.png" width="250" alt="Dark Swipe Delete"/>
-      <br/>
-      <b>Swipe to Delete</b>
-      <br/>
-      Intuitive card removal
-    </td>
-    <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Sheet Half.png" width="250" alt="Dark Card Picker Half"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Sheet Half.png" width="250" alt="Dark Card Picker Half"/>
       <br/>
       <b>Card Picker (Half)</b>
       <br/>
@@ -96,7 +89,7 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
   </tr>
   <tr>
     <td align="center">
-      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Sheet Full.png" width="250" alt="Dark Card Picker Full"/>
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Sheet Full.png" width="250" alt="Dark Card Picker Full"/>
       <br/>
       <b>Card Picker (Full)</b>
       <br/>
