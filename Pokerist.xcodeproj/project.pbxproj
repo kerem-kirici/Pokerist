@@ -45,6 +45,11 @@
 			path = PokeristUITests;
 			sourceTree = "<group>";
 		};
+		FA9356662E98239E0041FA43 /* Photos */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Photos;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +80,7 @@
 		FA9355F32E9821AB0041FA43 = {
 			isa = PBXGroup;
 			children = (
+				FA9356662E98239E0041FA43 /* Photos */,
 				FA9355FE2E9821AB0041FA43 /* Pokerist */,
 				FA93560C2E9821AC0041FA43 /* PokeristTests */,
 				FA9356162E9821AC0041FA43 /* PokeristUITests */,
@@ -109,6 +115,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				FA9355FE2E9821AB0041FA43 /* Pokerist */,
+				FA9356662E98239E0041FA43 /* Photos */,
 			);
 			name = Pokerist;
 			packageProductDependencies = (

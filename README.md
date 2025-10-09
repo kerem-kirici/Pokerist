@@ -80,6 +80,13 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
       Detailed hand breakdown
     </td>
     <td align="center">
+      <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Delete.png" width="250" alt="Dark Swipe Delete"/>
+      <br/>
+      <b>Swipe to Delete</b>
+      <br/>
+      Intuitive card removal
+    </td>
+    <td align="center">
       <img src="Pokerist/Photos/Simulator Screenshot - iPhone 17 Pro - Dark Sheet Half.png" width="250" alt="Dark Card Picker Half"/>
       <br/>
       <b>Card Picker (Half)</b>
