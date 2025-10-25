@@ -17,7 +17,7 @@ struct ProbabilityText: View {
         let fullString = String(fullValue)
         
         if decimalPointIndex == 0 {
-            return "\(Int(ceil(fullValue)))"
+            return "\(Int(floor(fullValue)))"
         }
         
         if let dotIndex = fullString.firstIndex(of: ".") {

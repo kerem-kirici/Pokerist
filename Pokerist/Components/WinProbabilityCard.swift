@@ -14,11 +14,13 @@ struct WinProbabilityCard: View {
     let cacheKey: String
     let playerCards: [PlayingCard]
     let communityCards: [PlayingCard]
+    let opponentHands: [[PlayingCard]]
     
     @Binding var isExpanded: Bool
     @State private var expandedHandIds: Set<UUID> = []  // Track which hands are expanded
     @State private var winProbabilityState: WinProbabilityState = .notLoaded
     @State private var opponentHandsState: OpponentHandsState = .notLoaded
+    @State private var opponentWinProbabilities: [Double] = []
     @State private var winProbabilityTask: Task<Void, Never>?
     @State private var opponentHandsTask: Task<Void, Never>?
     
@@ -107,27 +109,36 @@ struct WinProbabilityCard: View {
             if canExpand && isExpanded {
                 Divider()
                 
-                switch opponentHandsState {
-                case .notLoaded:
-                    // Should not happen, but show loading
-                    LoadingView()
-                    
-                case .loading:
-                    LoadingView()
-                    
-                case .loaded(let opponentHands):
-                    if opponentHands.isEmpty {
-                        EmptyOpponentHandsView()
-                    } else {
-                        OpponentHandsListView(
-                            opponentHands: opponentHands,
-                            currentHand: currentHand,
-                            expandedHandIds: $expandedHandIds
-                        )
+                if !opponentHands.isEmpty {
+                    // Show opponent win probabilities when opponents are selected
+                    OpponentWinProbabilitiesView(
+                        opponentWinProbabilities: opponentWinProbabilities,
+                        opponentHands: opponentHands
+                    )
+                } else {
+                    // Show opponent hands that beat player when no opponents selected
+                    switch opponentHandsState {
+                    case .notLoaded:
+                        // Should not happen, but show loading
+                        LoadingView()
+                        
+                    case .loading:
+                        LoadingView()
+                        
+                    case .loaded(let opponentHands):
+                        if opponentHands.isEmpty {
+                            EmptyOpponentHandsView()
+                        } else {
+                            OpponentHandsListView(
+                                opponentHands: opponentHands,
+                                currentHand: currentHand,
+                                expandedHandIds: $expandedHandIds
+                            )
+                        }
+                        
+                    case .error:
+                        ErrorView()
                     }
-                    
-                case .error:
-                    ErrorView()
                 }
             }
         }
@@ -250,15 +261,20 @@ struct WinProbabilityCard: View {
                 guard !Task.isCancelled else { return }
                 
                 // Run calculation in background
-                let calculatedProbability = await PokerHandAnalyzer.calculateWinProbabilityAsync(
+                let result = await PokerHandAnalyzer.calculateWinProbabilityAsync(
                     playerCards: playerCards,
-                    communityCards: communityCards
+                    communityCards: communityCards,
+                    opponentHands: opponentHands
                 )
+                let calculatedProbability = result.playerWinProbability
                 
                 guard !Task.isCancelled else { return }
                 
                 // Cache the result
                 Self.winProbabilityCache[cacheKey] = calculatedProbability
+                
+                // Store opponent win probabilities
+                opponentWinProbabilities = result.opponentWinProbabilities
                 
                 // Update state
                 winProbabilityState = .loaded(calculatedProbability)
@@ -511,6 +527,7 @@ private struct ExpandableOpponentHandRow: View {
                 PlayingCard(suit: .diamond, rank: .queen),
                 PlayingCard(suit: .heart, rank: .jack)
             ],
+            opponentHands: [],
             isExpanded: .constant(false)
         )
         
@@ -531,6 +548,7 @@ private struct ExpandableOpponentHandRow: View {
                 PlayingCard(suit: .spade, rank: .two),
                 PlayingCard(suit: .club, rank: .nine)
             ],
+            opponentHands: [],
             isExpanded: .constant(true)
         )
         
@@ -547,9 +565,57 @@ private struct ExpandableOpponentHandRow: View {
             communityCards: [
                 PlayingCard(suit: .heart, rank: .three)
             ],
+            opponentHands: [],
             isExpanded: .constant(false)
         )
     }
     .padding()
+}
+
+// MARK: - Opponent Win Probabilities View
+private struct OpponentWinProbabilitiesView: View {
+    let opponentWinProbabilities: [Double]
+    let opponentHands: [[PlayingCard]]
+    
+    private var sortedOpponents: [(index: Int, probability: Double)] {
+        let opponents = Array(opponentWinProbabilities.enumerated())
+        return opponents.sorted { $0.element > $1.element }.map { (index: $0.offset, probability: $0.element) }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Win Probabilities")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            
+            VStack(spacing: 8) {
+                ForEach(sortedOpponents, id: \.index) { opponent in
+                    HStack {
+                        Text("Opponent \(opponent.index + 1)")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.primary)
+                        
+                        Spacer()
+                        
+                        ProbabilityText(probability: opponent.probability)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(Color.blue.opacity(0.15))
+                            )
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(.secondarySystemBackground))
+                    )
+                }
+            }
+        }
+    }
 }
 

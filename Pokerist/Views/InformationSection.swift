@@ -15,7 +15,8 @@ struct InformationSection: View {
     private var analysis: HandAnalysisResult {
         PokerHandAnalyzer.analyze(
             playerCards: gameState.playerCards,
-            communityCards: gameState.communityCards
+            communityCards: gameState.communityCards,
+            opponentHands: gameState.opponentHands
         )
     }
     
@@ -35,22 +36,46 @@ struct InformationSection: View {
         validPlayerCards == 1
     }
     
+    private var hasOpponents: Bool {
+        !gameState.opponentHands.isEmpty
+    }
+    
+    private var hasValidOpponentCards: Bool {
+        gameState.opponentHands.allSatisfy { hand in
+            hand.filter { $0.suit != nil && $0.rank != nil }.count == 2
+        }
+    }
+    
+    private var hasPartialOpponentCards: Bool {
+        gameState.opponentHands.contains { hand in
+            let validCards = hand.filter { $0.suit != nil && $0.rank != nil }.count
+            return validCards > 0 && validCards < 2
+        }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Check if player has selected both cards
             if !hasBothPlayerCards {
                 // Show message to select both player cards
                 PlaceholderCard(message: "Select \(hasOnePlayerCard ? "the remaining player card" : "both of the player cards") to see the analysis")
+            } else if hasOpponents && !hasValidOpponentCards {
+                // Show message to select opponent cards when opponents are enabled
+                let message = hasPartialOpponentCards ? 
+                    "Select the remaining opponent cards to see the analysis" : 
+                    "Select all opponent cards to see the analysis"
+                PlaceholderCard(message: message)
             } else {
                 
-                // Win Probability Section (Expandable - includes opponent hands, async calculated)
+                // Win Probability Section (Expandable only when opponents are selected)
                 WinProbabilityCard(
                     probability: analysis.winProbability,  // nil when async loading
                     currentHand: analysis.currentHand,
-                    canExpand: analysis.hasMinimumCards,  // Only expandable with 3+ community cards
+                    canExpand: hasOpponents && hasValidOpponentCards,  // Only expandable when opponents are selected
                     cacheKey: analysis.cacheKey,
                     playerCards: gameState.playerCards,
                     communityCards: gameState.communityCards,
+                    opponentHands: gameState.opponentHands,
                     isExpanded: $isWinProbabilityExpanded
                 )
                 .id(analysis.cacheKey)  // Recreate view when cards change
@@ -62,7 +87,7 @@ struct InformationSection: View {
                     }
                 }
                 
-                // Advanced analysis (only with minimum cards: 2 player + 3 community)
+                // Advanced analysis (only with minimum cards and NO opponents)
                 if analysis.hasMinimumCards {
                     // Possible Hands for Player (Expandable - async loading)
                     PossibleHandsCard(

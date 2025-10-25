@@ -24,10 +24,11 @@ class GameState {
     // MARK: - State
     var playerCards: [PlayingCard] = [.empty, .empty]
     var communityCards: [PlayingCard] = [.empty, .empty, .empty, .empty, .empty]
+    var opponentHands: [[PlayingCard]] = []
     
     // Mock hand
-    // var playerCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .eight), PlayingCard(suit: .diamond, rank: .seven)]
-    // var communityCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .two), PlayingCard(suit: .diamond, rank: .queen), PlayingCard(suit: .diamond, rank: .ace), .empty, .empty]
+    //var playerCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .eight), PlayingCard(suit: .diamond, rank: .seven)]
+    //var communityCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .two), PlayingCard(suit: .diamond, rank: .six), PlayingCard(suit: .diamond, rank: .five), .empty, .empty]
     
     // MARK: - Computed Properties
     
@@ -35,7 +36,8 @@ class GameState {
     var allSelectedCards: [PlayingCard] {
         let player = playerCards.filter { $0.suit != nil && $0.rank != nil }
         let community = communityCards.filter { $0.suit != nil && $0.rank != nil }
-        return player + community
+        let opponents = opponentHands.flatMap { $0.filter { $0.suit != nil && $0.rank != nil } }
+        return player + community + opponents
     }
     
     // MARK: - Card Selection Logic
@@ -128,6 +130,36 @@ class GameState {
     /// Resets community cards only
     func resetCommunityCards() {
         communityCards = [.empty, .empty, .empty, .empty, .empty]
+    }
+    
+    // MARK: - Opponent Hands Management
+    
+    /// Sets the number of opponent hands
+    func setOpponentCount(_ count: Int) {
+        guard count >= 0 else { return }
+        
+        // Initialize or resize opponent hands array
+        while opponentHands.count < count {
+            opponentHands.append([.empty, .empty])
+        }
+        
+        // Remove excess hands if count is reduced
+        if count < opponentHands.count {
+            opponentHands = Array(opponentHands.prefix(count))
+        }
+    }
+    
+    /// Updates an opponent card at a specific hand and card index
+    func updateOpponentCard(handIndex: Int, cardIndex: Int, suit: Suit?, rank: Rank?) {
+        guard handIndex >= 0 && handIndex < opponentHands.count else { return }
+        guard cardIndex >= 0 && cardIndex < 2 else { return }
+        
+        opponentHands[handIndex][cardIndex] = PlayingCard(suit: suit, rank: rank)
+    }
+    
+    /// Resets all opponent hands
+    func resetOpponentHands() {
+        opponentHands = []
     }
 }
 

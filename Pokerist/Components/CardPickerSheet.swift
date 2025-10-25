@@ -88,6 +88,9 @@ struct CardPickerSheet: View {
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Clear") {
+                        if selectedRank == nil && selectedSuit == nil {
+                            onDone()
+                        }
                         selectedSuit = nil
                         selectedRank = nil
                     }

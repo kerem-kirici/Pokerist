@@ -80,6 +80,7 @@ struct HandAnalysisResult {
     let currentHand: PokerHandType?
     let possibleHands: [PossibleHand]  // Empty when async loading needed
     let winProbability: Double?  // Nil when async loading needed
+    let opponentWinProbabilities: [Double]  // Win probabilities for each opponent
     let hasMinimumCards: Bool  // Whether we have enough cards to analyze
     let cacheKey: String  // Key for caching results
 }
@@ -91,7 +92,7 @@ class PokerHandAnalyzer {
     nonisolated static let simulationCount = 10000
     
     /// Analyzes the current game state and returns possible hands
-    static func analyze(playerCards: [PlayingCard], communityCards: [PlayingCard]) -> HandAnalysisResult {
+    static func analyze(playerCards: [PlayingCard], communityCards: [PlayingCard], opponentHands: [[PlayingCard]] = []) -> HandAnalysisResult {
         let validPlayerCards = playerCards.filter { $0.suit != nil && $0.rank != nil }
         let validCommunityCards = communityCards.filter { $0.suit != nil && $0.rank != nil }
         
@@ -104,6 +105,7 @@ class PokerHandAnalyzer {
                 currentHand: nil,
                 possibleHands: [],
                 winProbability: nil,
+                opponentWinProbabilities: [],
                 hasMinimumCards: false,
                 cacheKey: ""
             )
@@ -115,12 +117,13 @@ class PokerHandAnalyzer {
         let currentHand = evaluateHand(cards: allCards)
         
         // Generate cache key for async calculations
-        let cacheKey = generateCacheKey(playerCards: validPlayerCards, communityCards: validCommunityCards)
+        let cacheKey = generateCacheKey(playerCards: validPlayerCards, communityCards: validCommunityCards, opponentHands: opponentHands)
         
         return HandAnalysisResult(
             currentHand: currentHand,
             possibleHands: [],  // Empty - calculated async
             winProbability: nil,  // Nil - calculated async
+            opponentWinProbabilities: [],  // Empty - calculated async
             hasMinimumCards: hasMinimumCards,
             cacheKey: cacheKey
         )
@@ -241,6 +244,32 @@ class PokerHandAnalyzer {
     }
     
     // MARK: - Possible Hands Calculation
+
+    nonisolated private static func appendPossibleHands(
+        to possibleHands: inout [PossibleHand],
+        handType: PokerHandType,
+        requiredCards: [String],
+        probability: Double,
+        neededCopies: Int = 1
+    ) {
+        // Split distinct rank outcomes into separate PossibleHand entries
+        let uniqueRanks = Array(Set(requiredCards))
+        
+        for rank in uniqueRanks {
+            var cardsNeeded: [String] = []
+            for _ in 0..<neededCopies {
+                cardsNeeded.append(rank)
+            }
+            
+            possibleHands.append(
+                PossibleHand(
+                    handType: handType,
+                    requiredCards: cardsNeeded,
+                    probability: probability / Double(uniqueRanks.count)
+                )
+            )
+        }
+    }
     
     nonisolated private static func calculatePossibleHands(playerCards: [PlayingCard], communityCards: [PlayingCard]) -> [CombinedPossibleHands] {
         let validPlayerCards = playerCards.filter { $0.suit != nil && $0.rank != nil }
@@ -263,63 +292,155 @@ class PokerHandAnalyzer {
             return []
         }()
 
-        // Flush draws
+
+        // Example (flush draw block) — apply the "skip if current already >= flush" rule before appending:
         for suit in Suit.allCases {
             guard let count = suitCounts[suit] else { continue }
             if count >= 5 { continue }
             if count == 4 && cardsToSee >= 1 {
-                let p = calculateFlushProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetSuit: suit, currentHandType: currentHand, currentVector: currentVector)
-                if p > 0 {
-                    possibleHands.append(PossibleHand(handType: .flush, requiredCards: ["Any \(suitName(suit))"], probability: p))
+                // Skip if current hand is already flush-or-stronger
+                if let ch = currentHand, ch.rank >= PokerHandType.flush.rank { /* do not add flush */ }
+                else {
+                    let p = calculateFlushProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetSuit: suit, currentHandType: currentHand, currentVector: currentVector)
+                    if p > 0 {
+                        appendPossibleHands(to: &possibleHands, handType: .flush, requiredCards: ["Any \(suitName(suit))"], probability: p, neededCopies: 1)
+                    }
                 }
             } else if count == 3 && cardsToSee >= 2 {
-                let p = calculateFlushProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetSuit: suit, currentHandType: currentHand, currentVector: currentVector)
-                if p > 0 {
-                    possibleHands.append(PossibleHand(handType: .flush, requiredCards: ["Any \(suitName(suit))", "Any \(suitName(suit))"], probability: p))
+                if let ch = currentHand, ch.rank >= PokerHandType.flush.rank { /* skip */ }
+                else {
+                    let p = calculateFlushProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetSuit: suit, currentHandType: currentHand, currentVector: currentVector)
+                    if p > 0 {
+                        appendPossibleHands(to: &possibleHands, handType: .flush, requiredCards: ["Any \(suitName(suit))"], probability: p, neededCopies: 2)
+                    }
                 }
             }
         }
 
-        // Straight draws
+        // --- Straight draws (same skip pattern)
         if hasOpenEndedStraightDraw(ranks: ranks) && cardsToSee >= 1 {
-            let p = calculateStraightProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, currentHandType: currentHand, currentVector: currentVector)
-            if p > 0 {
-                possibleHands.append(PossibleHand(handType: .straight, requiredCards: getStraightDrawCards(ranks: ranks), probability: p))
+            if !(currentHand != nil && currentHand!.rank >= PokerHandType.straight.rank) {
+                let p = calculateStraightProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, currentHandType: currentHand, currentVector: currentVector)
+                if p > 0 { appendPossibleHands(to: &possibleHands, handType: .straight, requiredCards: getStraightDrawCards(ranks: ranks), probability: p, neededCopies: 1) }
             }
         } else if hasGutshotStraightDraw(ranks: ranks) && cardsToSee >= 1 {
-            let p = calculateStraightProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, currentHandType: currentHand, currentVector: currentVector)
-            if p > 0 {
-                possibleHands.append(PossibleHand(handType: .straight, requiredCards: getStraightDrawCards(ranks: ranks), probability: p))
+            if !(currentHand != nil && currentHand!.rank >= PokerHandType.straight.rank) {
+                let p = calculateStraightProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, currentHandType: currentHand, currentVector: currentVector)
+                if p > 0 { appendPossibleHands(to: &possibleHands, handType: .straight, requiredCards: getStraightDrawCards(ranks: ranks), probability: p, neededCopies: 1) }
             }
         }
 
-        // Sets / Quads improvements
+        // --- Sets / Quads improvements
         for rank in Rank.allCases {
             guard let count = rankCounts[rank] else { continue }
             if count == 2 && cardsToSee >= 1 {
+                // skip if current already >= threeOfAKind
+                if let ch = currentHand, ch.rank >= PokerHandType.threeOfAKind.rank { continue }
                 let p = calculateSetProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetRank: rank, currentHandType: currentHand, currentVector: currentVector)
-                if p > 0 {
-                    possibleHands.append(PossibleHand(handType: .threeOfAKind, requiredCards: ["One more \(rankDisplay(rank))"], probability: p))
-                }
+                if p > 0 { appendPossibleHands(to: &possibleHands, handType: .threeOfAKind, requiredCards: [rankDisplay(rank)], probability: p, neededCopies: 1) }
             } else if count == 3 && cardsToSee >= 1 {
+                // If count==3 we could improve to quads (or already have full house). Only consider quads here.
+                if let ch = currentHand, ch.rank >= PokerHandType.fourOfAKind.rank { continue }
                 let p = calculateQuadsProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetRank: rank, currentHandType: currentHand, currentVector: currentVector)
+                if p > 0 { appendPossibleHands(to: &possibleHands, handType: .fourOfAKind, requiredCards: [rankDisplay(rank)], probability: p, neededCopies: 1) }
+            }
+        }
+        
+        // --- Full house potential
+        let tripCount = rankCounts.values.filter { $0 == 3 }.count
+        let pairCount = rankCounts.values.filter { $0 == 2 }.count
+
+        if (tripCount >= 1 || pairCount >= 2) && cardsToSee >= 1 {
+            // Skip if the player already has a full house or better
+            if !(currentHand != nil && currentHand!.rank >= PokerHandType.fullHouse.rank) {
+
+                // Build a helpful, specific list of ranks that would complete a full house.
+                // Cases:
+                // 1) If there are two (or more) pairs currently -> hitting one more card of either paired rank will make a full house.
+                // 2) If there is at least one trip -> pairing any other existing rank will make a full house;
+                //    prefer listing ranks that already exist (have at least 1 occurrence). If none, fallback to "Any pair".
+                var requiredCardsForFullHouse: [String] = []
+
+                if pairCount >= 2 {
+                    // Collect ranks that currently have exactly 2 cards (the pair ranks)
+                    let pairRanks = rankCounts.filter { $0.value == 2 }.map { $0.key }
+                    requiredCardsForFullHouse = pairRanks.map { rankDisplay($0) } // e.g. ["K", "8"]
+                } else if tripCount >= 1 {
+                    // We have at least one trip: find ranks (other than the trip rank) that appear at least once;
+                    // pairing any of those will form a full house.
+                    if let tripRank = rankCounts.first(where: { $0.value == 3 })?.key {
+                        // Candidate ranks are any ranks present in the current cards except the trip rank
+                        let candidateRanks = rankCounts.filter { $0.key != tripRank && $0.value >= 1 }.map { $0.key }
+                        if !candidateRanks.isEmpty {
+                            requiredCardsForFullHouse = candidateRanks.map { rankDisplay($0) }
+                        } else {
+                            // No specific candidate ranks present (edge case) -> fallback to generic description
+                            requiredCardsForFullHouse = ["Any pair"]
+                        }
+                    } else {
+                        // Defensive fallback — should not happen because tripCount >= 1 implies a tripRank exists
+                        requiredCardsForFullHouse = ["Any pair"]
+                    }
+                }
+
+                // If somehow empty, fall back to generic
+                if requiredCardsForFullHouse.isEmpty {
+                    requiredCardsForFullHouse = ["Any pair"]
+                }
+
+                let p = calculateFullHouseProbabilityBeatingCurrent(
+                    playerCards: validPlayerCards,
+                    communityCards: validCommunityCards,
+                    currentHandType: currentHand,
+                    currentVector: currentVector
+                )
+
                 if p > 0 {
-                    possibleHands.append(PossibleHand(handType: .fourOfAKind, requiredCards: ["One more \(rankDisplay(rank))"], probability: p))
+                    if pairCount >= 2 {
+                        // Need one more card of any paired rank
+                        appendPossibleHands(to: &possibleHands, handType: .fullHouse, requiredCards: requiredCardsForFullHouse, probability: p, neededCopies: 1)
+                    } else if tripCount >= 1 {
+                        // Need two more cards of any other rank
+                        appendPossibleHands(to: &possibleHands, handType: .fullHouse, requiredCards: requiredCardsForFullHouse, probability: p, neededCopies: 2)
+                    }
+                }
+            }
+        }
+        
+        // --- Two Pair potential
+        if cardsToSee >= 1 {
+            // If we already have a pair on the board + hole, we can look for another
+            // distinct rank that could pair up.
+            let existingPairs = rankCounts.filter { $0.value >= 2 }.map { $0.key }
+            
+            // Only meaningful if we already have one pair (or a single pair involving hole cards)
+            if existingPairs.count == 1 {
+                let existingPairRank = existingPairs.first!
+                
+                // Possible ranks (excluding the rank we already paired) from our hole cards or board
+                let candidateRanks = Set(holeRanks + ranks).subtracting([existingPairRank])
+                
+                if !candidateRanks.isEmpty {
+                    // Skip if current hand is already twoPair or stronger
+                    if currentHand == nil || currentHand!.rank < PokerHandType.twoPair.rank {
+                        let p = calculateTwoPairProbabilityBeatingCurrent(
+                            playerCards: validPlayerCards,
+                            communityCards: validCommunityCards,
+                            existingPairRank: existingPairRank,
+                            candidateRanks: Array(candidateRanks),
+                            currentHandType: currentHand,
+                            currentVector: currentVector
+                        )
+                        if p > 0 {
+                            let required = candidateRanks.map { rankDisplay($0) }
+                            appendPossibleHands(to: &possibleHands, handType: .twoPair, requiredCards: required, probability: p, neededCopies: 1)
+                        }
+                    }
                 }
             }
         }
 
-        // Full house potential
-        let pairCount = rankCounts.values.filter { $0 == 2 }.count
-        let tripCount = rankCounts.values.filter { $0 == 3 }.count
-        if (tripCount >= 1 || pairCount >= 2) && cardsToSee >= 1 {
-            let p = calculateFullHouseProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, currentHandType: currentHand, currentVector: currentVector)
-            if p > 0 {
-                possibleHands.append(PossibleHand(handType: .fullHouse, requiredCards: tripCount >= 1 ? ["Any pair"] : ["Trip from your pairs"], probability: p))
-            }
-        }
-
-        // One pair from hole cards only if it would beat current
+        // --- One pair from hole cards (only if it would BEAT the current hand)
         if cardsToSee >= 1 {
             var onePairRequired: [String] = []
             var targetRanks: [Rank] = []
@@ -331,26 +452,32 @@ class PokerHandAnalyzer {
                 }
             }
             if !onePairRequired.isEmpty {
-                let p = calculatePairProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetRanks: targetRanks, currentHandType: currentHand, currentVector: currentVector)
-                if p > 0 {
-                    possibleHands.append(PossibleHand(handType: .onePair, requiredCards: onePairRequired, probability: p))
+                // Skip entirely if current already >= onePair
+                if currentHand == nil || currentHand!.rank < PokerHandType.onePair.rank {
+                    let p = calculatePairProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetRanks: targetRanks, currentHandType: currentHand, currentVector: currentVector)
+                    if p > 0 { 
+                        let requiredRanks = targetRanks.map { rankDisplay($0) }
+                        appendPossibleHands(to: &possibleHands, handType: .onePair, requiredCards: requiredRanks, probability: p, neededCopies: 1) 
+                    }
                 }
             }
         }
-
         if cardsToSee >= 2 {
             for r in holeRanks {
                 let countForRank = rankCounts[r] ?? 0
                 if countForRank == 1 {
                     let p = calculateTripsFromUnpairedProbabilityBeatingCurrent(playerCards: validPlayerCards, communityCards: validCommunityCards, targetRank: r, currentHandType: currentHand, currentVector: currentVector)
                     if p > 0 {
-                        possibleHands.append(PossibleHand(handType: .threeOfAKind, requiredCards: ["\(rankDisplay(r))", "\(rankDisplay(r))"], probability: p))
+                        appendPossibleHands(to: &possibleHands, handType: .threeOfAKind, requiredCards: [rankDisplay(r)], probability: p, neededCopies: 2)
                     }
                 }
             }
         }
 
+        print("possibleHands: \(possibleHands)")
+
         let combinedHands = combinePossibleHands(possibleHands)
+        print("combinedHands: \(combinedHands)")
         return combinedHands.sorted { lhs, rhs in
             if lhs.totalProbability != rhs.totalProbability { return lhs.totalProbability > rhs.totalProbability }
             return lhs.handType.rank > rhs.handType.rank
@@ -385,9 +512,6 @@ class PokerHandAnalyzer {
                 combinedProbabilities.append(hand.probability)
                 totalProbability += hand.probability
             }
-            print("combinedRequiredCards: \(combinedRequiredCards)")
-            print("combinedProbabilities: \(combinedProbabilities)")
-            print("totalProbability: \(totalProbability)")
 
             combinedHands.append(CombinedPossibleHands(
                 handType: handType, requiredCombinations: combinedRequiredCards, probabilities: combinedProbabilities, totalProbability: totalProbability
@@ -714,13 +838,17 @@ class PokerHandAnalyzer {
     }
     
     // MARK: - Probability Calculations (using Monte Carlo simulation)
-    
+    // --- Monte-Carlo helpers: require exact hand type matches
+    // Replace the bodies of the helpers with these corrected versions:
+
     nonisolated private static func calculateFlushProbabilityBeatingCurrent(playerCards: [PlayingCard], communityCards: [PlayingCard], targetSuit: Suit, currentHandType: PokerHandType?, currentVector: [Int]) -> Double {
         return runSimulation(playerCards: playerCards, communityCards: communityCards) { simulatedCommunity in
             let allCards = playerCards + simulatedCommunity
             let suitCount = allCards.filter { $0.suit == targetSuit }.count
             guard suitCount >= 5 else { return false }
-            guard let candidateType = evaluateHand(cards: allCards), candidateType == .flush else { return false }
+            guard let candidateType = evaluateHand(cards: allCards) else { return false }
+            // require exact flush (not straightFlush / royalFlush)
+            guard candidateType == .flush else { return false }            // <- changed: exact match
             return beatsCurrentHand(candidateType: candidateType, candidateFullHand: allCards, currentHandType: currentHandType, currentVector: currentVector)
         }
     }
@@ -730,8 +858,9 @@ class PokerHandAnalyzer {
             let allCards = playerCards + simulatedCommunity
             let ranks = allCards.compactMap { $0.rank }
             guard checkStraight(ranks: ranks) else { return false }
-            guard let candidateType = evaluateHand(cards: allCards), candidateType == .straight || candidateType == .straightFlush || candidateType == .royalFlush else { return false }
-            // We listed straight as possible; allow straight and stronger straight-like results, but beating current
+            guard let candidateType = evaluateHand(cards: allCards) else { return false }
+            // require exact straight (not straightFlush or royalFlush)
+            guard candidateType == .straight else { return false }         // <- changed: exact match
             return beatsCurrentHand(candidateType: candidateType, candidateFullHand: allCards, currentHandType: currentHandType, currentVector: currentVector)
         }
     }
@@ -741,7 +870,9 @@ class PokerHandAnalyzer {
             let allCards = playerCards + simulatedCommunity
             let rankCount = allCards.filter { $0.rank == targetRank }.count
             guard rankCount >= 3 else { return false }
-            guard let candidateType = evaluateHand(cards: allCards), candidateType == .threeOfAKind || candidateType == .fullHouse || candidateType == .fourOfAKind else { return false }
+            guard let candidateType = evaluateHand(cards: allCards) else { return false }
+            // require exact threeOfAKind (not full house / quads)
+            guard candidateType == .threeOfAKind else { return false }     // <- changed
             return beatsCurrentHand(candidateType: candidateType, candidateFullHand: allCards, currentHandType: currentHandType, currentVector: currentVector)
         }
     }
@@ -760,12 +891,47 @@ class PokerHandAnalyzer {
         return runSimulation(playerCards: playerCards, communityCards: communityCards) { simulatedCommunity in
             let allCards = playerCards + simulatedCommunity
             let rankCounts = Dictionary(grouping: allCards.compactMap { $0.rank }, by: { $0 }).mapValues { $0.count }
+            // must form a pair of exactly one of the target ranks
             let hasTargetPair = targetRanks.contains { rank in (rankCounts[rank] ?? 0) >= 2 }
             guard hasTargetPair else { return false }
-            guard let candidateType = evaluateHand(cards: allCards), candidateType == .onePair || candidateType == .twoPair || candidateType == .threeOfAKind || candidateType == .fullHouse || candidateType == .fourOfAKind else { return false }
+            guard let candidateType = evaluateHand(cards: allCards) else { return false }
+            // require exact onePair (not twoPair / trips / full etc.)
+            guard candidateType == .onePair else { return false }         // <- changed
             return beatsCurrentHand(candidateType: candidateType, candidateFullHand: allCards, currentHandType: currentHandType, currentVector: currentVector)
         }
     }
+    
+    nonisolated private static func calculateTwoPairProbabilityBeatingCurrent(
+        playerCards: [PlayingCard],
+        communityCards: [PlayingCard],
+        existingPairRank: Rank,
+        candidateRanks: [Rank],
+        currentHandType: PokerHandType?,
+        currentVector: [Int]
+    ) -> Double {
+        return runSimulation(playerCards: playerCards, communityCards: communityCards) { simulatedCommunity in
+            let allCards = playerCards + simulatedCommunity
+            let rankCounts = Dictionary(grouping: allCards.compactMap { $0.rank }, by: { $0 }).mapValues { $0.count }
+
+            // Require that we still have the original pair rank,
+            // and that at least one *different* rank also forms a pair.
+            guard let existingPairCount = rankCounts[existingPairRank], existingPairCount >= 2 else { return false }
+            let hasNewPair = candidateRanks.contains { rankCounts[$0] ?? 0 >= 2 }
+            guard hasNewPair else { return false }
+
+            guard let candidateType = evaluateHand(cards: allCards) else { return false }
+            // Require exact Two Pair (not Full House or better)
+            guard candidateType == .twoPair else { return false }
+
+            return beatsCurrentHand(
+                candidateType: candidateType,
+                candidateFullHand: allCards,
+                currentHandType: currentHandType,
+                currentVector: currentVector
+            )
+        }
+    }
+
 
     nonisolated private static func calculateTripsFromUnpairedProbabilityBeatingCurrent(playerCards: [PlayingCard], communityCards: [PlayingCard], targetRank: Rank, currentHandType: PokerHandType?, currentVector: [Int]) -> Double {
         return runSimulation(playerCards: playerCards, communityCards: communityCards) { simulatedCommunity in
@@ -773,6 +939,8 @@ class PokerHandAnalyzer {
             let rankCount = allCards.filter { $0.rank == targetRank }.count
             guard rankCount >= 3 else { return false }
             guard let candidateType = evaluateHand(cards: allCards) else { return false }
+            // require exact threeOfAKind (not full house)
+            guard candidateType == .threeOfAKind else { return false }    // <- changed
             return beatsCurrentHand(candidateType: candidateType, candidateFullHand: allCards, currentHandType: currentHandType, currentVector: currentVector)
         }
     }
@@ -783,11 +951,11 @@ class PokerHandAnalyzer {
             let rankCounts = Dictionary(grouping: allCards.compactMap { $0.rank }, by: { $0 }).mapValues { $0.count }
             let counts = rankCounts.values.sorted(by: >)
             guard counts.count >= 2 && counts[0] >= 3 && counts[1] >= 2 else { return false }
-            guard let candidateType = evaluateHand(cards: allCards), candidateType == .fullHouse || candidateType == .fourOfAKind else { return false }
+            guard let candidateType = evaluateHand(cards: allCards), candidateType == .fullHouse else { return false } // <- changed: exact fullHouse required
             return beatsCurrentHand(candidateType: candidateType, candidateFullHand: allCards, currentHandType: currentHandType, currentVector: currentVector)
         }
     }
-    
+
     /// Get remaining deck excluding used cards
     nonisolated private static func getRemainingDeck(playerCards: [PlayingCard], communityCards: [PlayingCard]) -> [PlayingCard] {
         let allPossibleCards = generateFullDeck()
@@ -802,38 +970,65 @@ class PokerHandAnalyzer {
     // MARK: - Opponent Hand Analysis
     
     /// Generates a unique cache key for the current game state
-    nonisolated private static func generateCacheKey(playerCards: [PlayingCard], communityCards: [PlayingCard]) -> String {
+    nonisolated private static func generateCacheKey(playerCards: [PlayingCard], communityCards: [PlayingCard], opponentHands: [[PlayingCard]] = []) -> String {
         let allCards = playerCards + communityCards
         let cardStrings = allCards.map { card in
             guard let suit = card.suit, let rank = card.rank else { return "empty" }
             return "\(rank.rawValue)\(suit.rawValue)"
         }
-        return cardStrings.joined(separator: "-")
+        
+        let opponentStrings = opponentHands.map { hand in
+            hand.map { card in
+                guard let suit = card.suit, let rank = card.rank else { return "empty" }
+                return "\(rank.rawValue)\(suit.rawValue)"
+            }.joined(separator: ",")
+        }
+        
+        let opponentPart = opponentStrings.isEmpty ? "" : "|opponents:" + opponentStrings.joined(separator: ";")
+        return cardStrings.joined(separator: "-") + opponentPart
     }
     
     /// Calculates win probability asynchronously (runs in background)
     static func calculateWinProbabilityAsync(
         playerCards: [PlayingCard],
-        communityCards: [PlayingCard]
-    ) async -> Double {
+        communityCards: [PlayingCard],
+        opponentHands: [[PlayingCard]] = []
+    ) async -> (playerWinProbability: Double, opponentWinProbabilities: [Double]) {
         return await Task.detached(priority: .userInitiated) {
             let validPlayerCards = playerCards.filter { $0.suit != nil && $0.rank != nil }
             let validCommunityCards = communityCards.filter { $0.suit != nil && $0.rank != nil }
+            let validOpponentHands = opponentHands.map { hand in
+                hand.filter { $0.suit != nil && $0.rank != nil }
+            }.filter { !$0.isEmpty }
+            
             let allCards = validPlayerCards + validCommunityCards
             let currentHand = evaluateHand(cards: allCards)
             
-            return estimateWinProbability(
-                playerCards: validPlayerCards,
-                communityCards: validCommunityCards,
-                currentHand: currentHand
-            )
+            if validOpponentHands.isEmpty {
+                // No opponents - use original calculation
+                let playerWinProbability = estimateWinProbability(
+                    playerCards: validPlayerCards,
+                    communityCards: validCommunityCards,
+                    currentHand: currentHand
+                )
+                return (playerWinProbability, [])
+            } else {
+                // With opponents - calculate multi-player win probabilities
+                return calculateMultiPlayerWinProbabilities(
+                    playerCards: validPlayerCards,
+                    communityCards: validCommunityCards,
+                    opponentHands: validOpponentHands,
+                    currentHand: currentHand
+                )
+            }
         }.value
     }
     
     /// Analyzes possible hands asynchronously (runs in background)
     static func analyzePossibleHandsAsync(
         playerCards: [PlayingCard],
-        communityCards: [PlayingCard]
+        communityCards: [PlayingCard],
+        opponentHands: [[PlayingCard]] = []
     ) async -> [CombinedPossibleHands] {
         return await Task.detached(priority: .userInitiated) {
             return calculatePossibleHands(
@@ -847,7 +1042,8 @@ class PokerHandAnalyzer {
     static func analyzeOpponentHandsAsync(
         playerCards: [PlayingCard],
         communityCards: [PlayingCard],
-        currentHand: PokerHandType?
+        currentHand: PokerHandType?,
+        opponentHands: [[PlayingCard]] = []
     ) async -> [OpponentHand] {
         return await Task.detached(priority: .userInitiated) {
             return analyzeOpponentHands(
@@ -1021,6 +1217,109 @@ class PokerHandAnalyzer {
         }
         
         return sortedCombinations.first
+    }
+
+    
+    
+    /// Calculates win probabilities for all players in a multi-player game
+    nonisolated private static func calculateMultiPlayerWinProbabilities(
+        playerCards: [PlayingCard],
+        communityCards: [PlayingCard],
+        opponentHands: [[PlayingCard]],
+        currentHand: PokerHandType?
+    ) -> (playerWinProbability: Double, opponentWinProbabilities: [Double]) {
+        let allPlayers = [playerCards] + opponentHands
+        var playerWinCounts = Array(repeating: 0, count: allPlayers.count)
+        var totalSimulations = 0
+        
+        // Run Monte Carlo simulation
+        for _ in 0..<simulationCount {
+            let remainingDeck = getRemainingDeck(playerCards: playerCards, communityCards: communityCards)
+            let cardsNeeded = 5 - communityCards.count
+            
+            guard cardsNeeded > 0 && cardsNeeded <= remainingDeck.count else {
+                // All community cards are known - evaluate directly
+                let results = evaluateAllPlayerHands(allPlayers: allPlayers, communityCards: communityCards)
+                if let winnerIndex = findWinner(results: results) {
+                    playerWinCounts[winnerIndex] += 1
+                    totalSimulations += 1
+                }
+                continue
+            }
+            
+            // Shuffle deck and complete community cards
+            let shuffledDeck = remainingDeck.shuffled()
+            let simulatedCommunityCards = communityCards + Array(shuffledDeck.prefix(cardsNeeded))
+            
+            let results = evaluateAllPlayerHands(allPlayers: allPlayers, communityCards: simulatedCommunityCards)
+            if let winnerIndex = findWinner(results: results) {
+                playerWinCounts[winnerIndex] += 1
+                totalSimulations += 1
+            }
+        }
+        
+        guard totalSimulations > 0 else {
+            return (0.0, Array(repeating: 0.0, count: opponentHands.count))
+        }
+        
+        let playerWinProbability = Double(playerWinCounts[0]) / Double(totalSimulations)
+        let opponentWinProbabilities = Array(playerWinCounts[1...]).map { Double($0) / Double(totalSimulations) }
+        
+        return (playerWinProbability, opponentWinProbabilities)
+    }
+    
+    /// Evaluates all player hands with given community cards
+    nonisolated private static func evaluateAllPlayerHands(allPlayers: [[PlayingCard]], communityCards: [PlayingCard]) -> [(handType: PokerHandType?, tieBreakVector: [Int])] {
+        return allPlayers.map { playerCards in
+            let fullHand = playerCards + communityCards
+            let handType = evaluateHand(cards: fullHand)
+            let tieBreakVector = handType != nil ? handTieBreakVector(for: handType!, with: fullHand) : []
+            return (handType, tieBreakVector)
+        }
+    }
+    
+    /// Finds the winner among all players
+    nonisolated private static func findWinner(results: [(handType: PokerHandType?, tieBreakVector: [Int])]) -> Int? {
+        var bestPlayerIndex: Int?
+        var bestHandType: PokerHandType?
+        var bestTieBreakVector: [Int] = []
+        
+        for (index, result) in results.enumerated() {
+            let (handType, tieBreakVector) = result
+            
+            // Skip players with no hand
+            guard let currentHandType = handType else { continue }
+            
+            // First player with a hand
+            if bestPlayerIndex == nil {
+                bestPlayerIndex = index
+                bestHandType = currentHandType
+                bestTieBreakVector = tieBreakVector
+                continue
+            }
+            
+            // Compare with current best
+            if currentHandType.rank > bestHandType!.rank {
+                // Current player has better hand type
+                bestPlayerIndex = index
+                bestHandType = currentHandType
+                bestTieBreakVector = tieBreakVector
+            } else if currentHandType.rank == bestHandType!.rank {
+                // Same hand type - compare tie break vectors
+                for i in 0..<min(tieBreakVector.count, bestTieBreakVector.count) {
+                    if tieBreakVector[i] > bestTieBreakVector[i] {
+                        bestPlayerIndex = index
+                        bestHandType = currentHandType
+                        bestTieBreakVector = tieBreakVector
+                        break
+                    } else if tieBreakVector[i] < bestTieBreakVector[i] {
+                        break
+                    }
+                }
+            }
+        }
+        
+        return bestPlayerIndex
     }
     
     nonisolated private static func estimateWinProbability(

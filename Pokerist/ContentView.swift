@@ -8,7 +8,11 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var gameState = GameState()
+    @State private var gameState: GameState
+    
+    init(gameState: GameState = GameState()) {
+        _gameState = State(initialValue: gameState)
+    }
     
     private func getCurrentHand() -> PokerHandType? {
         let validPlayerCards = gameState.playerCards.filter { $0.suit != nil && $0.rank != nil }
@@ -39,7 +43,7 @@ struct ContentView: View {
                 .padding(.top)
                 
                 Spacer()
-                    .frame(height: 20)
+                    .frame(height: 10)
                 
                 HStack {
                     Label("Your Cards", systemImage: "hand.draw.fill")
@@ -57,6 +61,9 @@ struct ContentView: View {
                 YourHandSection(gameState: gameState)
                     .padding(.horizontal)
                     .padding(.bottom)
+                
+                AgainstOpponentView(gameState: gameState)
+                    .padding(.horizontal)
                 
                 HStack {
                     Label("Community Cards", systemImage: "person.2.arrow.trianglehead.counterclockwise")
@@ -81,5 +88,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    ContentView(gameState: GameState())
 }
