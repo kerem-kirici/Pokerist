@@ -1,17 +1,71 @@
 # Pokerist 🃏
 
-A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI. Analyze your poker hands, calculate win probabilities, and see what hands can beat you - all with a stunning liquid glass UI design.
+A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI. Analyze your poker hands, calculate win probabilities against up to 6 opponents, and see what hands can beat you - all with a stunning liquid glass UI design.
 
 ## ✨ Features
 
 - **Real-time Hand Analysis**: Instantly evaluates your current poker hand
 - **Win Probability Calculator**: Simulates 10,000 games to calculate your winning chances
-- **Opponent Hand Analysis**: Shows what hands can beat you and their probabilities
-- **Possible Hands Calculator**: Displays your potential draws and their probabilities
+- **Multi-Player Analysis**: Support for up to 6 opponents with detailed win probability calculations
+- **Advanced Opponent Hand Analysis**: Input opponent hands and see comprehensive win probability breakdowns
+- **Smart Possible Hands Calculator**: Displays distinct draw scenarios with accurate card requirements
+- **Intelligent Hand Separation**: Each possible hand type shows separate entries for different draw paths
+- **Accurate Card Requirements**: Shows exact card counts needed (e.g., "8, 8" for trips)
 - **Smart Card Selection**: Prevents selecting duplicate cards across player and community cards
 - **Swipe to Delete**: Intuitive gesture to remove cards
 - **Dark & Light Mode**: Fully supports both appearance modes with adaptive UI
 - **Liquid Glass Design**: Modern, elegant UI with frosted glass effects
+
+## 🎯 Multi-Player Hand Analysis
+
+Pokerist includes advanced **multi-player hand analysis** that supports up to **6 opponents** for comprehensive tournament and cash game analysis.
+
+### How Multi-Player Analysis Works
+
+1. **Add Opponent Hands**: 
+   - Tap the "+" button in the opponent section
+   - Select 2 hole cards for each opponent
+   - **Support for up to 6 opponents** for comprehensive analysis
+
+2. **Real-time Win Probability**:
+   - **Your Win Probability**: Shows your chances of winning against all opponents
+   - **Opponent Win Probabilities**: Individual win chances for each opponent
+   - **Hand Rankings**: See which hand would win in each scenario
+
+3. **Detailed Hand Breakdown**:
+   - **Opponent Hand Types**: Shows what hands each opponent could have
+   - **Example Cards**: Displays specific hole card combinations
+   - **Probability Distribution**: How likely each hand type is
+   - **Beating Analysis**: Which opponent hands can beat you
+
+### Example Scenario
+
+**Your Hand**: A♠ K♠  
+**Community Cards**: 7♣ 8♦ 9♥  
+**Opponent 1**: J♠ 10♣ (Straight draw)  
+**Opponent 2**: 7♠ 7♥ (Three of a kind)  
+
+**Results**:
+- **Your Win Probability**: 35%
+- **Opponent 1 Win**: 45% (needs 6 or J for straight)
+- **Opponent 2 Win**: 20% (needs 7 for four of a kind)
+
+### Advanced Features
+
+- **Monte Carlo Simulation**: 10,000 simulations for accurate probabilities
+- **Multi-Player Support**: Analyze up to 6 opponents simultaneously
+- **Hand Strength Comparison**: Detailed tie-break analysis
+- **Dynamic Updates**: Probabilities update as you add/remove opponents
+- **Visual Hand Display**: See exact cards for each opponent
+- **Probability Meter**: Color-coded win probability indicators
+
+### Use Cases
+
+- **Tournament Analysis**: Compare your hand against up to 6 opponents
+- **Cash Game Strategy**: Understand your position against the field
+- **Multi-Way Pot Analysis**: Analyze complex scenarios with multiple players
+- **Learning Tool**: See how different hands perform in multi-way pots
+- **Decision Making**: Make informed betting decisions based on win probabilities
 
 ## 📱 Screenshots
 
@@ -117,16 +171,53 @@ A beautiful, modern Texas Hold'em poker hand analyzer for iOS built with SwiftUI
   </tr>
 </table>
 
+### Opponent Analysis
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Opponent Home.png" width="250" alt="Dark Opponent Home"/>
+      <br/>
+      <b>Opponent Analysis in Dark Mode</b>
+      <br/>
+      Multi-player hand analysis
+    </td>
+    <td align="center">
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Light Opponent Home.png" width="250" alt="Light Opponent Home"/>
+      <br/>
+      <b>Opponent Analysis in Light Mode</b>
+      <br/>
+      Allows up to 6 opponents
+    </td>
+    <td align="center">
+      <img src="Photos/Simulator Screenshot - iPhone 17 Pro - Dark Opponent Info.png" width="250" alt="Dark Opponent Analysis View"/>
+      <br/>
+      <b>Analysis Information</b>
+      <br/>
+      Gives specific win probabilities for each player
+    </td>
+  </tr>
+</table>
+
 ## 🎮 How to Use
 
+### Basic Hand Analysis
 1. **Select Your Cards**: Tap the "+" buttons to select your two hole cards
 2. **Add Community Cards**: Add the flop, turn, and river as they're revealed
 3. **View Analysis**: See your current hand, win probability, and detailed statistics
 4. **Expand Details**: Tap on analysis cards to see:
    - Opponent hands that can beat you
-   - Your possible improved hands
+   - Your possible improved hands with distinct draw scenarios
+   - Exact card requirements for each hand type
    - Example cards for each scenario
 5. **Delete Cards**: Swipe up on any card to remove it
+
+### Multi-Player Analysis (Up to 6 Opponents)
+1. **Add Opponents**: Tap the "+" button in the opponent section
+2. **Select Opponent Cards**: Choose 2 hole cards for each opponent (up to 6 opponents)
+3. **View Win Probabilities**: See your chances against each opponent
+4. **Analyze Hand Strength**: Compare your hand to opponent possibilities
+5. **Make Strategic Decisions**: Use probability data for betting decisions
 
 ## 🏗️ Architecture
 
@@ -180,8 +271,9 @@ The analyzer evaluates all standard poker hands:
 9. **One Pair**
 10. **High Card**
 
-## 🎯 Win Probability Algorithm
+## 🎯 Advanced Analysis Algorithms
 
+### Win Probability Calculation
 The win probability is calculated using **Monte Carlo simulation**:
 
 - Simulates **10,000 random games** for statistical accuracy
@@ -189,6 +281,35 @@ The win probability is calculated using **Monte Carlo simulation**:
 - Deals remaining community cards randomly
 - Evaluates final hands to determine winners
 - Runs asynchronously to keep UI responsive
+
+### Smart Possible Hands Analysis
+The possible hands calculator uses **intelligent separation logic**:
+
+- **Distinct Draw Scenarios**: Each unique draw path gets its own entry
+- **Accurate Card Requirements**: Shows exact cards needed (e.g., "8, 8" for trips)
+- **Separate Straight Draws**: Different straight draws (needing 4 vs 9) appear as separate entries
+- **Hand-Specific Logic**: Different hand types use appropriate card counting
+- **Probability Distribution**: Evenly distributes probability among distinct outcomes
+
+### Example: Smart Hand Separation
+
+**Before (Combined):**
+```
+Straight: Need [4, 9] - 26% probability
+```
+
+**After (Separated):**
+```
+Straight: Need [4] - 13% probability
+Straight: Need [9] - 13% probability
+```
+
+**For Three of a Kind:**
+```
+Three of a Kind: Need [8, 8] - 12% probability
+```
+
+This ensures each distinct draw scenario is clearly displayed as a separate possible hand entry.
 
 ## 🎨 Design Philosophy
 
@@ -210,12 +331,16 @@ The win probability is calculated using **Monte Carlo simulation**:
 - **Result Caching**: Cached results based on card combinations
 - **Task Cancellation**: Automatic cleanup when cards change
 - **Lazy Loading**: Analysis only loads when needed
+- **Smart Hand Separation**: Efficient grouping of distinct draw scenarios
+- **Optimized Probability Distribution**: Even division among separate outcomes
 
 ### UI/UX Features
 - **Expandable Cards**: Tap to reveal detailed information
 - **Loading States**: Smooth loading animations
 - **Empty States**: Helpful messages when no data available
 - **Error Handling**: Graceful error states with retry options
+- **Clear Hand Separation**: Distinct entries for different draw scenarios
+- **Intuitive Card Requirements**: Clear display of exact cards needed
 
 ## 📋 Requirements
 

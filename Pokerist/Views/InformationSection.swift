@@ -67,11 +67,11 @@ struct InformationSection: View {
                 PlaceholderCard(message: message)
             } else {
                 
-                // Win Probability Section (Expandable only when opponents are selected)
+                // Win Probability Section (Expandable when there are enough cards for analysis)
                 WinProbabilityCard(
                     probability: analysis.winProbability,  // nil when async loading
                     currentHand: analysis.currentHand,
-                    canExpand: hasOpponents && hasValidOpponentCards,  // Only expandable when opponents are selected
+                    canExpand: hasOpponents ? hasValidOpponentCards : analysis.hasMinimumCards,  // Expandable when there are enough cards for meaningful analysis
                     cacheKey: analysis.cacheKey,
                     playerCards: gameState.playerCards,
                     communityCards: gameState.communityCards,

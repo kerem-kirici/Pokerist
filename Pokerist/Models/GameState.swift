@@ -22,13 +22,13 @@ import Observation
 @Observable
 class GameState {
     // MARK: - State
-    var playerCards: [PlayingCard] = [.empty, .empty]
-    var communityCards: [PlayingCard] = [.empty, .empty, .empty, .empty, .empty]
+    //var playerCards: [PlayingCard] = [.empty, .empty]
+    //var communityCards: [PlayingCard] = [.empty, .empty, .empty, .empty, .empty]
     var opponentHands: [[PlayingCard]] = []
     
     // Mock hand
-    //var playerCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .eight), PlayingCard(suit: .diamond, rank: .seven)]
-    //var communityCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .two), PlayingCard(suit: .diamond, rank: .six), PlayingCard(suit: .diamond, rank: .five), .empty, .empty]
+    var playerCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .eight), PlayingCard(suit: .diamond, rank: .seven)]
+    var communityCards: [PlayingCard] = [PlayingCard(suit: .club, rank: .two), PlayingCard(suit: .diamond, rank: .six), PlayingCard(suit: .diamond, rank: .five), .empty, .empty]
     
     // MARK: - Computed Properties
     
