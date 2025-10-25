@@ -232,20 +232,26 @@ Pokerist/
 │   ├── SelectCardButton.swift
 │   ├── CardPickerSheet.swift
 │   ├── CurrentHandBadge.swift
-│   ├── WinProbabilityCard.swift
+│   ├── OpponentHandView.swift
+│   ├── PlaceholderCard.swift
 │   ├── PossibleHandsCard.swift
 │   ├── ProbabilityMeter.swift
 │   ├── ProbabilityText.swift
-│   └── RequiredCardsView.swift
+│   ├── RequiredCardsView.swift
+│   └── WinProbabilityCard.swift
 ├── Views/               # Screen-level views
-│   ├── YourHand.swift
+│   ├── AgainstOpponentView.swift
 │   ├── CommunityCards.swift
-│   └── InformationSection.swift
+│   ├── InformationSection.swift
+│   └── YourHand.swift
 ├── Models/              # Business logic
 │   ├── GameState.swift
 │   └── PokerHandAnalyzer.swift
-└── Types/               # Type definitions
-    └── PlayingCardTypes.swift
+├── Types/               # Type definitions
+│   └── PlayingCardTypes.swift
+├── Assets.xcassets/     # App assets and images
+├── ContentView.swift    # Main app view
+└── PokeristApp.swift   # App entry point
 ```
 
 ### Key Design Patterns
